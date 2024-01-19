@@ -1,7 +1,7 @@
 package forex.http
 package rates
 
-import forex.domain.Currency.show
+import forex.domain.Currency.{Currency, show}
 import forex.domain.Rate.Pair
 import forex.domain._
 import io.circe._
@@ -35,5 +35,4 @@ object Protocol {
 
   implicit val responseEncoder: Encoder[GetApiResponse] =
     deriveConfiguredEncoder[GetApiResponse]
-
 }
