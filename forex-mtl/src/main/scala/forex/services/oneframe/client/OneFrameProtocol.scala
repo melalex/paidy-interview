@@ -2,10 +2,10 @@ package forex.services.oneframe.client
 
 import cats.Show
 import forex.services.oneframe.client.OneFrameProtocol.CurrencyDto.CurrencyDto
-import forex.services.oneframe.client.OneFrameProtocol.{CurrencyDto, CurrencyExchangeRateDto}
+import forex.services.oneframe.client.OneFrameProtocol.{ CurrencyDto, CurrencyExchangeRateDto, CurrencyPairDto }
 import io.circe.generic.extras.Configuration
-import io.circe.generic.extras.semiauto.{deriveConfiguredDecoder, deriveConfiguredEncoder}
-import io.circe.{Decoder, Encoder}
+import io.circe.generic.extras.semiauto.{ deriveConfiguredDecoder, deriveConfiguredEncoder }
+import io.circe.{ Decoder, Encoder }
 
 import java.time.OffsetDateTime
 import scala.util.Try
@@ -23,6 +23,8 @@ trait OneFrameProtocol {
 
   implicit lazy val currencyExchangeRateDtoEncoder: Encoder[CurrencyExchangeRateDto] =
     deriveConfiguredEncoder[CurrencyExchangeRateDto]
+
+  implicit lazy val show: Show[CurrencyPairDto] = Show.show(it => it.from.code + it.to.code)
 }
 
 object OneFrameProtocol extends OneFrameProtocol {

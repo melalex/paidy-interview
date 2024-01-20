@@ -1,6 +1,6 @@
 package forex
 
-import cats.effect.{Concurrent, ConcurrentEffect, Timer}
+import cats.effect.{ Concurrent, ConcurrentEffect, Resource, Timer }
 import forex.config.ApplicationConfig
 import forex.http.HttpErrorHandler
 import forex.http.KleisliCustomSyntax._
@@ -11,7 +11,8 @@ import forex.services.oneframe.RefreshableCache
 import forex.util.TimeProvider
 import org.http4s._
 import org.http4s.blaze.client.BlazeClientBuilder
-import org.http4s.server.middleware.{AutoSlash, Timeout}
+import org.http4s.client.Client
+import org.http4s.server.middleware.{ AutoSlash, Timeout }
 
 import scala.concurrent.ExecutionContext
 
@@ -57,9 +58,17 @@ object Module {
   def apply[F[_]: ConcurrentEffect: Timer](
       config: ApplicationConfig,
       timeProvider: TimeProvider[F]
-  )(implicit ec: ExecutionContext): fs2.Stream[F, Module[F]] =
-    fs2.Stream
-      .resource(BlazeClientBuilder[F](ec).resource)
-      .evalMap(it => OneFrameClient.cached(it, config.oneFrame, timeProvider))
+  )(implicit ec: ExecutionContext): fs2.Stream[F, Module[F]] = {
+    val module = BlazeClientBuilder[F](ec).resource
+      .flatMap(it => resource(config, timeProvider, it))
+
+    fs2.Stream.resource(module)
+  }
+
+  def resource[F[_]: ConcurrentEffect: Timer](config: ApplicationConfig,
+                                              timeProvider: TimeProvider[F],
+                                              client: Client[F]): Resource[F, Module[F]] =
+    Resource
+      .eval(OneFrameClient.cached(client, config.oneFrame, timeProvider))
       .map(it => new Module(config, RatesServices.live(it, config.rates, timeProvider), it))
 }

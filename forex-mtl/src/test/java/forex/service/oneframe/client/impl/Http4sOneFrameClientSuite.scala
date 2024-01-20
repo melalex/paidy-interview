@@ -8,7 +8,7 @@ import forex.services.oneframe.client.OneFrameProtocol
 import forex.services.oneframe.client.OneFrameProtocol.{CurrencyDto, CurrencyExchangeRateDto, CurrencyPairDto}
 import forex.services.oneframe.client.impl.Http4sOneFrameClient
 import forex.services.oneframe.errors.Error.OneFrameLookupFailed
-import forex.test.WiremockFixture
+import forex.test.WireMockFixture
 import io.circe.syntax._
 import org.http4s.Status.{NotFound, Ok}
 import org.http4s.blaze.client.BlazeClientBuilder
@@ -20,7 +20,7 @@ import java.time.OffsetDateTime
 import scala.concurrent.ExecutionContext
 import scala.language.postfixOps
 
-class Http4sOneFrameClientSuite extends AnyWordSpec with Matchers with WiremockFixture with OneFrameProtocol {
+class Http4sOneFrameClientSuite extends AnyWordSpec with Matchers with WireMockFixture with OneFrameProtocol {
 
   implicit private val ec: ExecutionContext    = ExecutionContext.global
   implicit private val shift: ContextShift[IO] = IO.contextShift(ec)
@@ -36,7 +36,7 @@ class Http4sOneFrameClientSuite extends AnyWordSpec with Matchers with WiremockF
 
     "return Ok response" when {
 
-      "One Frame respond with Ok" in withWiremock { wiremock =>
+      "One Frame respond with Ok" in withWireMock { wire =>
         val request = WireMock
           .get(s"/rates?pair=${CurrencyDto.Usd.code}${CurrencyDto.Jpy.code}")
           .withHeader("token", equalTo(apiKey))
@@ -47,9 +47,9 @@ class Http4sOneFrameClientSuite extends AnyWordSpec with Matchers with WiremockF
           .withHeader("Content-Type", "application/json")
           .withStatus(Ok.code)
 
-        wiremock.stubFor(request.willReturn(response))
+        wire.stubFor(request.willReturn(response))
 
-        val actual = createClient[IO](wiremock.port())
+        val actual = createClient[IO](wire.port())
           .use(_.getExchangeRates(Seq(CurrencyPairDto(CurrencyDto.Usd, CurrencyDto.Jpy))))
           .unsafeRunSync()
 
@@ -59,7 +59,7 @@ class Http4sOneFrameClientSuite extends AnyWordSpec with Matchers with WiremockF
 
     "return error response" when {
 
-      "One Frame respond with Nok" in withWiremock { wiremock =>
+      "One Frame respond with Nok" in withWireMock { wire =>
         val request = WireMock
           .get(s"/rates?pair=${CurrencyDto.Usd.code}${CurrencyDto.Jpy.code}")
           .withHeader("token", equalTo(apiKey))
@@ -69,9 +69,9 @@ class Http4sOneFrameClientSuite extends AnyWordSpec with Matchers with WiremockF
           .withBody("Error")
           .withStatus(NotFound.code)
 
-        wiremock.stubFor(request.willReturn(response))
+        wire.stubFor(request.willReturn(response))
 
-        val port = wiremock.port()
+        val port = wire.port()
 
         val actual = createClient[IO](port)
           .use(_.getExchangeRates(Seq(CurrencyPairDto(CurrencyDto.Usd, CurrencyDto.Jpy))))

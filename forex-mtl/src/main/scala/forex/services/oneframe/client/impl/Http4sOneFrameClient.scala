@@ -38,7 +38,7 @@ class Http4sOneFrameClient[F[_]: Sync] private (http4s: Client[F], config: OneFr
       )
 
   private def exchangeRatesRequest(pairs: Iterable[CurrencyPairDto]) = {
-    val query = pairs.map(it => it.from.code + it.to.code)
+    val query = pairs.map(_.show)
 
     Request[F](
       uri = ratesPath.withQueryParam(PairParam, query.toSeq),

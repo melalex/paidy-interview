@@ -1,7 +1,7 @@
 package forex.service.oneframe.interpreters
 
 import cats.effect.IO
-import forex.domain.Rate.Pair
+import forex.domain.Rate.{ AllCurrencyPairs, Pair }
 import forex.domain.{ Currency, Price, Rate, Timestamp }
 import forex.services.oneframe
 import forex.services.oneframe.errors.Error.OneFrameLookupFailed
@@ -25,7 +25,7 @@ class OneFrameCachingMiddlewareSuite extends AnyWordSpec with Matchers {
   "OneFrameCachingMiddleware" should {
 
     "return cached value" in {
-      when(delegate.getExchangeRates(OneFrameCachingMiddleware.AllCurrencyPairs))
+      when(delegate.getExchangeRates(AllCurrencyPairs))
         .thenReturn(IO(Right(Map(pair -> rate))))
 
       val actual = OneFrameCachingMiddleware[IO](delegate, TimeProvider.real())
@@ -36,7 +36,7 @@ class OneFrameCachingMiddlewareSuite extends AnyWordSpec with Matchers {
     }
 
     "refresh cache" in {
-      when(delegate.getExchangeRates(OneFrameCachingMiddleware.AllCurrencyPairs))
+      when(delegate.getExchangeRates(AllCurrencyPairs))
         .thenReturn(IO(Left(OneFrameLookupFailed(""))), IO(Right(Map(pair -> rate))))
 
       val actual = for {

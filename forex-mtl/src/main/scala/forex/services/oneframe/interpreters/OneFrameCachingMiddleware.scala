@@ -4,16 +4,15 @@ import cats.data.EitherT
 import cats.effect.Sync
 import cats.effect.concurrent.Ref
 import cats.implicits._
-import forex.domain.Rate.Pair
-import forex.domain.{ Currency, Rate }
+import forex.domain.Rate
+import forex.domain.Rate.{AllCurrencyPairs, Pair}
 import forex.services.oneframe.RefreshableCache
 import forex.services.oneframe.errors.Error
 import forex.services.oneframe.errors.Error.OneFrameLookupFailed
-import forex.services.oneframe.interpreters.OneFrameCachingMiddleware.AllCurrencyPairs
-import forex.services.{ oneframe, OneFrameService }
-import forex.util.{ Logging, TimeProvider }
+import forex.services.{OneFrameService, oneframe}
+import forex.util.{Logging, TimeProvider}
 
-import java.time.{ Duration => JDuration }
+import java.time.{Duration => JDuration}
 import scala.concurrent.duration.Duration
 import scala.jdk.DurationConverters.JavaDurationOps
 
@@ -52,11 +51,6 @@ class OneFrameCachingMiddleware[F[_]] private (delegate: oneframe.Algebra[F], ti
 }
 
 object OneFrameCachingMiddleware {
-
-  final val AllCurrencyPairs = Currency.values.view
-    .flatMap(a => Currency.values.filter(_ != a).map(b => a -> b))
-    .map { case (from, to) => Pair(from, to) }
-    .toSeq
 
   def apply[F[_]: Sync](delegate: OneFrameService[F], timeProvider: TimeProvider[F]): F[OneFrameCachingMiddleware[F]] =
     Ref
