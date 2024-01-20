@@ -2,41 +2,33 @@ package forex.domain
 
 import cats.Show
 
-sealed trait Currency
+import scala.util.Try
 
-object Currency {
-  case object AUD extends Currency
-  case object CAD extends Currency
-  case object CHF extends Currency
-  case object EUR extends Currency
-  case object GBP extends Currency
-  case object NZD extends Currency
-  case object JPY extends Currency
-  case object SGD extends Currency
-  case object USD extends Currency
+object Currency extends Enumeration {
 
-  implicit val show: Show[Currency] = Show.show {
-    case AUD => "AUD"
-    case CAD => "CAD"
-    case CHF => "CHF"
-    case EUR => "EUR"
-    case GBP => "GBP"
-    case NZD => "NZD"
-    case JPY => "JPY"
-    case SGD => "SGD"
-    case USD => "USD"
-  }
+  type Currency = Value
 
-  def fromString(s: String): Currency = s.toUpperCase match {
-    case "AUD" => AUD
-    case "CAD" => CAD
-    case "CHF" => CHF
-    case "EUR" => EUR
-    case "GBP" => GBP
-    case "NZD" => NZD
-    case "JPY" => JPY
-    case "SGD" => SGD
-    case "USD" => USD
-  }
+  protected case class CurrencyVal(code: String) extends super.Val
 
+  implicit def valueToPlanetVal(x: Value): CurrencyVal = x.asInstanceOf[CurrencyVal]
+
+  final val Aud = CurrencyVal("AUD")
+  final val Cad = CurrencyVal("CAD")
+  final val Chf = CurrencyVal("CHF")
+  final val Eur = CurrencyVal("EUR")
+  final val Gbp = CurrencyVal("GBP")
+  final val Nzd = CurrencyVal("NZD")
+  final val Jpy = CurrencyVal("JPY")
+  final val Sgd = CurrencyVal("SGD")
+  final val Usd = CurrencyVal("USD")
+
+  private val codeToCurrency = values.map(it => it.code -> it).toMap
+
+  implicit val show: Show[Currency] = Show.show(_.code)
+
+  def fromString[E](str: String)(err: String => E): Either[E, Currency] =
+    codeToCurrency.get(str).toRight(err(str))
+
+  def fromStringTry(str: String): Try[Currency] =
+    fromString(str)(str => new IllegalArgumentException(s"[ $str ] is not valid currency")).toTry
 }
