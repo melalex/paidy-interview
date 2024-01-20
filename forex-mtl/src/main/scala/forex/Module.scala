@@ -1,8 +1,9 @@
 package forex
 
-import cats.effect.{ Concurrent, ConcurrentEffect, Timer }
+import cats.effect.{Concurrent, ConcurrentEffect, Timer}
 import forex.config.ApplicationConfig
 import forex.http.HttpErrorHandler
+import forex.http.KleisliCustomSyntax._
 import forex.http.rates.RatesHttpRoutes
 import forex.programs._
 import forex.services._
@@ -10,8 +11,7 @@ import forex.services.oneframe.RefreshableCache
 import forex.util.TimeProvider
 import org.http4s._
 import org.http4s.blaze.client.BlazeClientBuilder
-import org.http4s.implicits._
-import org.http4s.server.middleware.{ AutoSlash, Timeout }
+import org.http4s.server.middleware.{AutoSlash, Timeout}
 
 import scala.concurrent.ExecutionContext
 
@@ -40,7 +40,7 @@ class Module[F[_]: Concurrent: Timer](config: ApplicationConfig,
 
   private val http: HttpRoutes[F] = ratesHttpRoutes
 
-  val httpApp: HttpApp[F] = appMiddleware(routesMiddleware(httpErrorHandler(http)).orNotFound)
+  val httpApp: HttpApp[F] = appMiddleware(routesMiddleware(httpErrorHandler(http)).orNotFoundProblem)
 
   val streamApp: fs2.Stream[F, Unit] = fs2.Stream
     .awakeDelay[F](config.oneFrame.cache.ttl)

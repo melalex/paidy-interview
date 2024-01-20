@@ -1,4 +1,4 @@
-package forex.service.programs.rates
+package forex.programs.rates
 
 import cats.Id
 import cats.implicits.catsSyntaxOptionId

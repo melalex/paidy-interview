@@ -2,6 +2,8 @@ package forex.domain
 
 import cats.Show
 
+import scala.util.Try
+
 object Currency extends Enumeration {
 
   type Currency = Value
@@ -26,4 +28,7 @@ object Currency extends Enumeration {
 
   def fromString[E](str: String)(err: String => E): Either[E, Currency] =
     codeToCurrency.get(str).toRight(err(str))
+
+  def fromStringTry(str: String): Try[Currency] =
+    fromString(str)(str => new IllegalArgumentException(s"[ $str ] is not valid currency")).toTry
 }

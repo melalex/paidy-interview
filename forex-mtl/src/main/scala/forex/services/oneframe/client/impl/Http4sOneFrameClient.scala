@@ -41,7 +41,7 @@ class Http4sOneFrameClient[F[_]: Sync] private (http4s: Client[F], config: OneFr
     val query = pairs.map(it => it.from.code + it.to.code)
 
     Request[F](
-      uri = ratesPath.withMultiValueQueryParams(Map(PairParam -> query.toList)),
+      uri = ratesPath.withQueryParam(PairParam, query.toSeq),
       headers = Headers(Header.Raw(TokenHeader, config.apiKey))
     )
   }

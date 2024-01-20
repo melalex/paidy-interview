@@ -22,7 +22,7 @@ object Converters {
         tittle = "Exchange rate is outdated",
         status = 500,
         detail = s"The latest known exchange rate is [ $rate ]. But it's older then [ ${rateTtl.toSeconds} ] sec",
-        instance = s"/rates?from=${rate.pair.from}&to=${rate.pair.to}"
+        instance = s"/rates"
       )
     case Error.UnknownCurrency(currency) =>
       Problem(

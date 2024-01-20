@@ -6,16 +6,11 @@ import forex.domain.Rate.Pair
 import forex.domain._
 import io.circe._
 import io.circe.generic.extras.Configuration
-import io.circe.generic.extras.semiauto.deriveConfiguredEncoder
+import io.circe.generic.extras.semiauto.{deriveConfiguredDecoder, deriveConfiguredEncoder}
 
 object Protocol {
 
   implicit val configuration: Configuration = Configuration.default.withSnakeCaseMemberNames
-
-  final case class GetApiRequest(
-      from: Currency,
-      to: Currency
-  )
 
   final case class GetApiResponse(
       from: Currency,
@@ -35,4 +30,9 @@ object Protocol {
 
   implicit val responseEncoder: Encoder[GetApiResponse] =
     deriveConfiguredEncoder[GetApiResponse]
+
+  implicit val currencyDtoDecoder: Decoder[Currency] = Decoder.decodeString.emapTry(Currency.fromStringTry)
+
+  implicit val responseDecoder: Decoder[GetApiResponse] =
+    deriveConfiguredDecoder[GetApiResponse]
 }
