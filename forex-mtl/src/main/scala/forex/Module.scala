@@ -7,6 +7,7 @@ import forex.http.rates.RatesHttpRoutes
 import forex.programs._
 import forex.services._
 import forex.services.oneframe.RefreshableCache
+import forex.util.TimeProvider
 import org.http4s._
 import org.http4s.blaze.client.BlazeClientBuilder
 import org.http4s.implicits._
@@ -50,10 +51,15 @@ class Module[F[_]: Concurrent: Timer](config: ApplicationConfig,
 object Module {
 
   def apply[F[_]: ConcurrentEffect: Timer](
-      config: ApplicationConfig
+      config: ApplicationConfig,
+  )(implicit ec: ExecutionContext): fs2.Stream[F, Module[F]] = apply(config, TimeProvider.real())
+
+  def apply[F[_]: ConcurrentEffect: Timer](
+      config: ApplicationConfig,
+      timeProvider: TimeProvider[F]
   )(implicit ec: ExecutionContext): fs2.Stream[F, Module[F]] =
     fs2.Stream
       .resource(BlazeClientBuilder[F](ec).resource)
-      .evalMap(it => OneFrameClient.cached(it, config.oneFrame))
-      .map(it => new Module(config, RatesServices.live(it, config.rates), it))
+      .evalMap(it => OneFrameClient.cached(it, config.oneFrame, timeProvider))
+      .map(it => new Module(config, RatesServices.live(it, config.rates, timeProvider), it))
 }

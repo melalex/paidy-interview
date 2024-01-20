@@ -1,23 +1,25 @@
 package forex.services.oneframe.interpreters
 
 import cats.data.EitherT
+import cats.effect.Sync
 import cats.effect.concurrent.Ref
-import cats.effect.{Clock, Sync}
 import cats.implicits._
 import forex.domain.Rate.Pair
-import forex.domain.{Currency, Rate}
+import forex.domain.{ Currency, Rate }
 import forex.services.oneframe.RefreshableCache
 import forex.services.oneframe.errors.Error
 import forex.services.oneframe.errors.Error.OneFrameLookupFailed
 import forex.services.oneframe.interpreters.OneFrameCachingMiddleware.AllCurrencyPairs
-import forex.services.{OneFrameService, oneframe}
-import forex.util.Logging
+import forex.services.{ oneframe, OneFrameService }
+import forex.util.{ Logging, TimeProvider }
 
-import java.util.concurrent.TimeUnit
+import java.time.{ Duration => JDuration }
+import scala.concurrent.duration.Duration
+import scala.jdk.DurationConverters.JavaDurationOps
 
-class OneFrameCachingMiddleware[F[_]] private (delegate: oneframe.Algebra[F])(
+class OneFrameCachingMiddleware[F[_]] private (delegate: oneframe.Algebra[F], timeProvider: TimeProvider[F])(
     cache: Ref[F, Error Either Map[Pair, Rate]]
-)(implicit F: Sync[F], clock: Clock[F])
+)(implicit F: Sync[F])
     extends oneframe.Algebra[F]
     with RefreshableCache[F]
     with Logging {
@@ -30,20 +32,20 @@ class OneFrameCachingMiddleware[F[_]] private (delegate: oneframe.Algebra[F])(
   override def refreshCache(): F[Error Either Unit] =
     for {
       _ <- F.delay(logger.debug("Starting rates cache refresh"))
-      start <- clock.realTime(TimeUnit.MILLISECONDS)
+      start <- timeProvider.now
       update <- delegate.getExchangeRates(AllCurrencyPairs)
-      finish <- clock.realTime(TimeUnit.MILLISECONDS)
+      finish <- timeProvider.now
       _ <- cache.set(update)
-      _ <- logCacheRefreshFinished(update, finish - start)
+      _ <- logCacheRefreshFinished(update, JDuration.between(start, finish).toScala)
     } yield update.map(_ => ())
 
-  private def logCacheRefreshFinished(result: Either[Error, Map[Pair, Rate]], msSpent: Long) = F.delay {
+  private def logCacheRefreshFinished(result: Either[Error, Map[Pair, Rate]], duration: Duration) = F.delay {
     result match {
       case Left(OneFrameLookupFailed(msg)) =>
-        logger.error(s"Failed to refresh rates cache after [ $msSpent ] ms. Reason: $msg")
+        logger.error(s"Failed to refresh rates cache after [ ${duration.toMillis} ] ms. Reason: $msg")
       case Right(value) =>
-        logger.debug(
-          s"Rates cache refresh has been finished successfully. [ ${value.size} ] values has been cached in [ $msSpent ]."
+        logger.info(
+          s"Rates cache refresh has been finished successfully. [ ${value.size} ] values has been cached in [ ${duration.toMillis} ] ms."
         )
     }
   }
@@ -51,14 +53,14 @@ class OneFrameCachingMiddleware[F[_]] private (delegate: oneframe.Algebra[F])(
 
 object OneFrameCachingMiddleware {
 
-  private val AllCurrencyPairs = Currency.values.view
+  final val AllCurrencyPairs = Currency.values.view
     .flatMap(a => Currency.values.filter(_ != a).map(b => a -> b))
     .map { case (from, to) => Pair(from, to) }
     .toSeq
 
-  def apply[F[_]: Sync: Clock](delegate: OneFrameService[F]): F[OneFrameCachingMiddleware[F]] =
+  def apply[F[_]: Sync](delegate: OneFrameService[F], timeProvider: TimeProvider[F]): F[OneFrameCachingMiddleware[F]] =
     Ref
       .of(Map.empty[Pair, Rate].asRight[Error])
-      .map(new OneFrameCachingMiddleware(delegate)(_))
+      .map(new OneFrameCachingMiddleware(delegate, timeProvider)(_))
       .flatMap(it => it.refreshCache().as(it))
 }

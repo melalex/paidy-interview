@@ -2,7 +2,6 @@ package forex.services.rates.interpreters
 
 import cats.Monad
 import cats.data.EitherT
-import cats.effect.Clock
 import cats.implicits._
 import forex.config.RatesConfig
 import forex.domain.Rate
@@ -11,27 +10,26 @@ import forex.services.rates.Algebra
 import forex.services.rates.Converter.toRatesError
 import forex.services.rates.errors.Error
 import forex.services.rates.errors.Error.CouldNotCheckRateOfSameCurrencies
+import forex.util.TimeProvider
 
-import java.time.{ Duration, Instant }
-import java.util.concurrent.TimeUnit
+import java.time.Duration
 import scala.jdk.DurationConverters.JavaDurationOps
 
-class OneFrameRatesLive[F[_]](client: OneFrameService[F], config: RatesConfig)(implicit F: Monad[F], clock: Clock[F])
-    extends Algebra[F] {
+class OneFrameRatesLive[F[_]](oneFrameService: OneFrameService[F], config: RatesConfig, timeProvider: TimeProvider[F])(
+    implicit F: Monad[F]
+) extends Algebra[F] {
 
   override def get(pair: Rate.Pair): F[Error Either Rate] =
     if (pair.to == pair.from) F.pure(Left(CouldNotCheckRateOfSameCurrencies))
     else
-      EitherT(client.getExchangeRates(Set(pair)))
+      EitherT(oneFrameService.getExchangeRates(Set(pair)))
         .map(it => it(pair))
         .leftMap(toRatesError)
         .flatMapF(validateRateTimestamp)
         .value
 
   private def validateRateTimestamp(rate: Rate) =
-    clock
-      .realTime(TimeUnit.SECONDS)
-      .map(Instant.ofEpochSecond)
+    timeProvider.now
       .map(it => Duration.between(rate.timestamp.value.toInstant, it).toScala)
       .map(it => it > config.ttl)
       .map {

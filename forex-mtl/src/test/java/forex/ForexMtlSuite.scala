@@ -1,0 +1,5 @@
+package forex
+
+class ForexMtlSuite {
+
+}

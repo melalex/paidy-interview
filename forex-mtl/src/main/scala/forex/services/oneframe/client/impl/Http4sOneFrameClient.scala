@@ -1,18 +1,18 @@
 package forex.services.oneframe.client.impl
 
-import cats.effect.{Concurrent, Sync, Timer}
+import cats.effect.{ Concurrent, Sync, Timer }
 import cats.implicits._
 import forex.config.OneFrameConfig
-import forex.services.oneframe.client.OneFrameProtocol.{CurrencyExchangeRateDto, CurrencyPairDto}
-import forex.services.oneframe.client.{OneFrameClient, OneFrameProtocol}
-import forex.services.oneframe.client.impl.Http4sOneFrameClient.{PairParam, TokenHeader}
+import forex.services.oneframe.client.OneFrameProtocol.{ CurrencyExchangeRateDto, CurrencyPairDto }
+import forex.services.oneframe.client.{ OneFrameClient, OneFrameProtocol }
+import forex.services.oneframe.client.impl.Http4sOneFrameClient.{ PairParam, TokenHeader }
 import forex.services.oneframe.errors.Error
 import forex.services.oneframe.errors.Error.OneFrameLookupFailed
-import forex.util.{LogErrorResponses, Logging}
+import forex.util.{ LogErrorResponses, Logging }
 import org.http4s._
 import org.http4s.circe.jsonOf
 import org.http4s.client.Client
-import org.http4s.client.middleware.{Retry, RetryPolicy}
+import org.http4s.client.middleware.{ Retry, RetryPolicy }
 import org.http4s.implicits.http4sLiteralsSyntax
 import org.typelevel.ci.CIStringSyntax
 
@@ -58,4 +58,6 @@ object Http4sOneFrameClient extends Logging {
 
     new Http4sOneFrameClient(LogErrorResponses(Retry(retryPolicy, SensitiveHeaders)(http4s)), config)
   }
+
+  def createSimple[F[_]: Sync](http4s: Client[F], config: OneFrameConfig) = new Http4sOneFrameClient(http4s, config)
 }

@@ -1,14 +1,13 @@
 package forex.services.rates
 
-import cats.effect.Clock
-import cats.{ Applicative, Monad }
+import cats.Monad
 import forex.config.RatesConfig
 import forex.services.OneFrameService
 import forex.services.rates.interpreters._
+import forex.util.TimeProvider
 
 object Interpreters {
 
-  def dummy[F[_]: Applicative]: Algebra[F] = new OneFrameDummy()
-
-  def live[F[_]: Monad: Clock](client: OneFrameService[F], config: RatesConfig) = new OneFrameRatesLive(client, config)
+  def live[F[_]: Monad](client: OneFrameService[F], config: RatesConfig, timeProvider: TimeProvider[F]) =
+    new OneFrameRatesLive(client, config, timeProvider)
 }

@@ -3,9 +3,9 @@ package forex.services.oneframe.client
 import cats.Show
 import forex.services.oneframe.client.OneFrameProtocol.CurrencyDto.CurrencyDto
 import forex.services.oneframe.client.OneFrameProtocol.{ CurrencyDto, CurrencyExchangeRateDto }
-import io.circe.Decoder
+import io.circe.{ Decoder, Encoder }
 import io.circe.generic.extras.Configuration
-import io.circe.generic.extras.semiauto.deriveConfiguredDecoder
+import io.circe.generic.extras.semiauto.{ deriveConfiguredDecoder, deriveConfiguredEncoder }
 
 import java.time.OffsetDateTime
 import scala.util.Try
@@ -14,12 +14,19 @@ trait OneFrameProtocol {
 
   implicit val configuration: Configuration = Configuration.default.withSnakeCaseMemberNames
 
-  implicit lazy val CurrencyDtoDecoder: Decoder[CurrencyDto] = Decoder.decodeString.emapTry(CurrencyDto.fromString)
-  implicit lazy val OffsetDateTimeDecoder: Decoder[OffsetDateTime] =
+  implicit lazy val currencyDtoDecoder: Decoder[CurrencyDto] = Decoder.decodeString.emapTry(CurrencyDto.fromString)
+  implicit lazy val offsetDateTimeDecoder: Decoder[OffsetDateTime] =
     Decoder.decodeString.emapTry((value: String) => Try(OffsetDateTime.parse(value)))
 
-  implicit lazy val CurrencyExchangeRateDtoDecoder: Decoder[CurrencyExchangeRateDto] =
+  implicit lazy val currencyExchangeRateDtoDecoder: Decoder[CurrencyExchangeRateDto] =
     deriveConfiguredDecoder[CurrencyExchangeRateDto]
+
+  implicit lazy val currencyDtoEncoder: Encoder[CurrencyDto] = Encoder.encodeString.contramap[CurrencyDto](_.code)
+  implicit lazy val offsetDateTimeEncoder: Encoder[OffsetDateTime] =
+    Encoder.encodeString.contramap[OffsetDateTime](_.toString)
+
+  implicit lazy val currencyExchangeRateDtoEncoder: Encoder[CurrencyExchangeRateDto] =
+    deriveConfiguredEncoder[CurrencyExchangeRateDto]
 }
 
 object OneFrameProtocol extends OneFrameProtocol {
